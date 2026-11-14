@@ -1416,9 +1416,8 @@
             // Render cinema content
             if (slide.type === 'video') {
                 let vid = viewerCinema.querySelector('video');
-                const isSameVideo = vid && vid.getAttribute('src') === slide.src;
 
-                if (!isSameVideo) {
+                if (!vid) {
                     viewerCinema.innerHTML = `<video 
                         src="${slide.src}" 
                         autoplay 
@@ -1426,17 +1425,35 @@
                         loop 
                         playsinline 
                         webkit-playsinline 
+                        x5-playsinline 
                         preload="auto" 
                         style="width:100%;height:100%;object-fit:contain;background:#000;">
                     </video>`;
                     vid = viewerCinema.querySelector('video');
+                } else if (vid.getAttribute('src') !== slide.src) {
+                    vid.src = slide.src;
+                    vid.load();
                 }
 
                 if (vid) {
                     vid.defaultMuted = true;
                     vid.muted = true;
                     vid.volume = 0;
-                    vid.play().catch(() => {});
+                    vid.playsInline = true;
+
+                    const tryPlay = () => {
+                        const p = vid.play();
+                        if (p !== undefined) {
+                            p.catch(() => {
+                                vid.muted = true;
+                                vid.play().catch(() => {});
+                            });
+                        }
+                    };
+
+                    tryPlay();
+                    vid.onloadeddata = () => { tryPlay(); };
+                    vid.oncanplay = () => { tryPlay(); };
                 }
             } else if (slide.type === 'photo') {
                 viewerCinema.innerHTML = `<img class="cinema-photo" src="${slide.src}" alt="Memory" loading="eager" decoding="async">`;
@@ -1652,9 +1669,20 @@
             if (isAutoplaying) scheduleNextSlide();
         });
 
-        // Tap on cinema area toggles play / pause like Netflix
+        // Tap on cinema area: if clicking a video that is paused, play it and keep autoplay running!
         viewerCinema.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON' || e.target.tagName === 'A') return;
+
+            // If user clicked directly on a video:
+            if (e.target.tagName === 'VIDEO') {
+                const vid = e.target;
+                if (vid.paused) {
+                    vid.muted = true;
+                    vid.play().catch(() => {});
+                    if (!isAutoplaying) startAutoplay();
+                    return;
+                }
+            }
             toggleAutoplay();
         });
     </script>

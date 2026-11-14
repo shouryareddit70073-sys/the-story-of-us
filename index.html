@@ -713,7 +713,7 @@
     <!-- ===== FULL-SCREEN EPISODE VIEWER ===== -->
     <div class="viewer" id="viewer">
         <!-- Background Soundtrack Audio Element -->
-        <audio id="bgAudio" preload="none" loop playsinline></audio>
+        <audio id="bgAudio" preload="auto" loop playsinline></audio>
 
         <!-- Top bar -->
         <div class="viewer-topbar">
@@ -798,7 +798,7 @@
                 date: "Dussehra 2025",
                 thumbImg: "media/ep1-dussehra/photo-7.jpeg",
                 audioSrc: "media/audio/ep1-dil-nu.m4a",
-                audioStart: 18,
+                audioStart: 0,
                 songTitle: "Dil Nu — AP Dhillon",
                 slides: [
                     // --- PART 1: THE CAR JOURNEY ---
@@ -908,7 +908,7 @@
                 date: "Post-Dussehra Special 👗",
                 thumbImg: "media/ep2-outfit-checks/ep2-pic-1.jpeg",
                 audioSrc: "media/audio/ep2-tere-sang-yaara.m4a",
-                audioStart: 25,
+                audioStart: 0,
                 songTitle: "Tere Sang Yaara — Atif Aslam",
                 slides: [
                     {
@@ -954,7 +954,7 @@
                 date: "Our First Date 🌹",
                 thumbImg: "media/ep3-first-date/ep3-pic-1.jpeg",
                 audioSrc: "media/audio/ep3-shukran-allah.m4a",
-                audioStart: 34,
+                audioStart: 0,
                 songTitle: "Shukran Allah — Salim Merchant",
                 slides: [
                     {
@@ -997,7 +997,7 @@
                 date: "Marine Drive & Barkhas 🌊",
                 thumbImg: "media/ep4-long-drive/ep4-img-1.jpeg",
                 audioSrc: "media/audio/ep4-through-the-dark.m4a",
-                audioStart: 11,
+                audioStart: 0,
                 songTitle: "Through the Dark — One Direction",
                 slides: [
                     {
@@ -1059,7 +1059,7 @@
                 date: "11th September — Bubu Day 🎂",
                 thumbImg: "media/ep5-birthday/ep5-pic-1.jpeg",
                 audioSrc: "media/audio/ep5-birthday-song.m4a",
-                audioStart: 12,
+                audioStart: 0,
                 songTitle: "Heeriye — Jasleen Royal & Arijit Singh",
                 slides: [
                     {
@@ -1144,7 +1144,12 @@
             'media/ep3-first-date/ep3-pic-1.jpeg',
             'media/ep4-long-drive/ep4-img-1.jpeg',
             'media/ep5-birthday/ep5-pic-1.jpeg',
-            'media/ep1-dussehra/video-call.mp4'
+            'media/ep1-dussehra/video-call.mp4',
+            'media/audio/ep1-dil-nu.m4a',
+            'media/audio/ep2-tere-sang-yaara.m4a',
+            'media/audio/ep3-shukran-allah.m4a',
+            'media/audio/ep4-through-the-dark.m4a',
+            'media/audio/ep5-birthday-song.m4a'
         ];
 
         let assetsLoaded = 0;
@@ -1208,6 +1213,12 @@
                     v.muted = true;
                     v.onloadeddata = v.onerror = () => updatePreloadProgress();
                     v.src = src;
+                } else if (src.endsWith('.m4a') || src.endsWith('.mp3')) {
+                    const a = new Audio();
+                    a.preload = 'auto';
+                    a.oncanplaythrough = a.onerror = () => updatePreloadProgress();
+                    setTimeout(() => updatePreloadProgress(), 1500);
+                    a.src = src;
                 } else {
                     const img = new Image();
                     img.onload = img.onerror = () => updatePreloadProgress();
@@ -1321,14 +1332,11 @@
                 const trackEl = document.getElementById('musicTrackName');
                 if (trackEl) trackEl.textContent = ep.songTitle || 'Soundtrack';
 
-                const curSrc = bgAudio.getAttribute('src');
-                if (curSrc !== ep.audioSrc) {
+                const targetSrc = new URL(ep.audioSrc, window.location.href).href;
+                if (bgAudio.src !== targetSrc) {
                     bgAudio.src = ep.audioSrc;
-                    bgAudio.currentTime = ep.audioStart || 0;
-                } else if (bgAudio.currentTime < (ep.audioStart || 0)) {
-                    bgAudio.currentTime = ep.audioStart || 0;
                 }
-
+                bgAudio.currentTime = 0;
                 bgAudio.muted = isAudioMuted;
                 bgAudio.volume = 0.85;
 
@@ -1432,21 +1440,21 @@
                 }
             } else if (slide.type === 'photo') {
                 viewerCinema.innerHTML = `<img class="cinema-photo" src="${slide.src}" alt="Memory" loading="eager" decoding="async">`;
+            } else if (slide.emoji) {
+                viewerCinema.innerHTML = `<div class="cinema-emoji-wrap">
+                    <div class="cinema-emoji-bg" style="background:${slide.bg || ep.gradient}"></div>
+                    <div class="cinema-emoji">${slide.emoji}</div>
+                </div>`;
             }
 
             // Low-bandwidth optimization: pre-fetch next 2 slides ahead so transitions are instantaneous
             if (currentSlide + 1 < ep.slides.length) {
                 const s1 = ep.slides[currentSlide + 1];
-                if (s1.type === 'photo') { new Image().src = s1.src; }
+                if (s1 && s1.type === 'photo') { new Image().src = s1.src; }
             }
             if (currentSlide + 2 < ep.slides.length) {
                 const s2 = ep.slides[currentSlide + 2];
-                if (s2.type === 'photo') { new Image().src = s2.src; }
-            } else {
-                viewerCinema.innerHTML = `<div class="cinema-emoji-wrap">
-                    <div class="cinema-emoji-bg" style="background:${slide.bg || ep.gradient}"></div>
-                    <div class="cinema-emoji">${slide.emoji}</div>
-                </div>`;
+                if (s2 && s2.type === 'photo') { new Image().src = s2.src; }
             }
 
             // Subtitle with smooth fade animation
